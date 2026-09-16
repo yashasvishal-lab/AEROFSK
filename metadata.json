@@ -1,0 +1,6 @@
+{
+  "name": "Acoustic FSK Data Link",
+  "description": "Precision acoustic data transceiver and real-time audio spectrum telemetry workstation.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
