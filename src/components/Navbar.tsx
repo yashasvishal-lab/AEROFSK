@@ -129,6 +129,16 @@ export const Navbar: React.FC = () => {
           >
             Logs & History
           </button>
+          <button
+            onClick={() => setActiveTab('how-it-works')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              activeTab === 'how-it-works'
+                ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+            }`}
+          >
+            How It Works
+          </button>
         </nav>
 
         {/* Right side controls & status */}
@@ -230,6 +240,28 @@ export const Navbar: React.FC = () => {
               }`}
             >
               Tone Lab
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('history');
+                setMobileMenuOpen(false);
+              }}
+              className={`p-2.5 rounded-lg text-left text-xs font-medium ${
+                activeTab === 'history' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'bg-slate-900 text-slate-300'
+              }`}
+            >
+              Logs
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('how-it-works');
+                setMobileMenuOpen(false);
+              }}
+              className={`col-span-2 p-2.5 rounded-lg text-center text-xs font-medium ${
+                activeTab === 'how-it-works' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'bg-slate-900 text-slate-300'
+              }`}
+            >
+              How It Works
             </button>
           </div>
 

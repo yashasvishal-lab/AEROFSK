@@ -83,7 +83,7 @@ interface ModemContextType {
   messages: ReceivedMessage[];
   logs: LogEntry[];
   engine: AudioModemEngine | null;
-  activeTab: 'dashboard' | 'transmitter' | 'receiver' | 'tonelab' | 'history';
+  activeTab: 'dashboard' | 'transmitter' | 'receiver' | 'tonelab' | 'history' | 'how-it-works';
   visualizerMode: VisualizerMode;
   isInspectorOpen: boolean;
   isSettingsOpen: boolean;
@@ -99,7 +99,7 @@ interface ModemContextType {
   setFrequencyProfile: (profile: FrequencyProfile) => void;
   clearLogs: () => void;
   clearMessages: () => void;
-  setActiveTab: (tab: 'dashboard' | 'transmitter' | 'receiver' | 'tonelab' | 'history') => void;
+  setActiveTab: (tab: 'dashboard' | 'transmitter' | 'receiver' | 'tonelab' | 'history' | 'how-it-works') => void;
   setVisualizerMode: (mode: VisualizerMode) => void;
   setIsInspectorOpen: (open: boolean) => void;
   setIsSettingsOpen: (open: boolean) => void;
@@ -117,7 +117,7 @@ export const ModemProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [telemetry, setTelemetry] = useState<TelemetryData>(INITIAL_TELEMETRY);
   const [messages, setMessages] = useState<ReceivedMessage[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'transmitter' | 'receiver' | 'tonelab' | 'history'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'transmitter' | 'receiver' | 'tonelab' | 'history' | 'how-it-works'>('dashboard');
   const [visualizerMode, setVisualizerMode] = useState<VisualizerMode>('spectrum');
   const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);

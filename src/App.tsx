@@ -7,6 +7,7 @@ import { ReceiverPanel } from './components/ReceiverPanel';
 import { TransmitterPanel } from './components/TransmitterPanel';
 import { ToneLabPanel } from './components/ToneLabPanel';
 import { HistoryDrawer } from './components/HistoryDrawer';
+import { HowItWorksPanel } from './components/HowItWorksPanel';
 import { PacketInspectorModal } from './components/PacketInspectorModal';
 import { SettingsModal } from './components/SettingsModal';
 import { Radio, ShieldAlert, Cpu, HeartHandshake } from 'lucide-react';
@@ -54,6 +55,12 @@ const DashboardContent: React.FC = () => {
         {activeTab === 'history' && (
           <div className="max-w-4xl mx-auto w-full">
             <HistoryDrawer />
+          </div>
+        )}
+
+        {activeTab === 'how-it-works' && (
+          <div className="max-w-4xl mx-auto w-full">
+            <HowItWorksPanel />
           </div>
         )}
       </main>
