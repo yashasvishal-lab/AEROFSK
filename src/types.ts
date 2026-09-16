@@ -1,4 +1,4 @@
-export type FrequencyProfile = 'ultrasonic' | 'audible-hf' | 'standard-af' | 'custom';
+export type FrequencyProfile = 'ultrasonic' | 'audible-hf' | 'standard-af' | 'long-range' | 'custom';
 
 export interface ModulationConfig {
   freq0: number; // Hz for binary '0'
@@ -10,6 +10,7 @@ export interface ModulationConfig {
   txVolume: number; // 0.05 to 1.0
   loopbackMode: boolean; // internal software loopback for single-device verification
   rampEnvelope: boolean; // anti-click Hann envelope on bit transitions
+  channelKey: string; // Encryption PIN/passphrase
 }
 
 export type RxLinkState =

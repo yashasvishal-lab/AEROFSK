@@ -36,6 +36,13 @@ export const PROFILE_PRESETS: Record<
     freq1: 2200,
     bitDurationMs: 60,
   },
+  'long-range': {
+    name: 'Long-Range Deep Penetration',
+    description: '800 Hz & 1.2 kHz @ 120ms — Ultra-low frequency and slow baud rate to penetrate walls and travel maximum acoustic distance.',
+    freq0: 800,
+    freq1: 1200,
+    bitDurationMs: 120,
+  },
   custom: {
     name: 'Custom Calibration',
     description: 'User-defined carrier tone pair for laboratory experimentation.',
@@ -55,6 +62,7 @@ const DEFAULT_CONFIG: ModulationConfig = {
   txVolume: 0.35,
   loopbackMode: false,
   rampEnvelope: true,
+  channelKey: '',
 };
 
 const INITIAL_TELEMETRY: TelemetryData = {
@@ -216,7 +224,7 @@ export const ModemProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const transmitMessage = useCallback(
     async (text: string) => {
       if (!engineRef.current || isTransmitting) return;
-      const pkt = buildPacket(text, config.bitDurationMs);
+      const pkt = buildPacket(text, config.bitDurationMs, config.channelKey);
 
       setIsTransmitting(true);
       setTxProgress({ percent: 0, currentBit: pkt.full[0], bitIndex: 0, totalBits: pkt.full.length });

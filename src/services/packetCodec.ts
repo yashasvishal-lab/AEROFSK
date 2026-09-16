@@ -8,6 +8,27 @@ export const PROTOCOL = {
 };
 
 /**
+ * Symmetric XOR Stream Cipher (LCG-based PRNG) for payload encryption.
+ */
+export function cipher(text: string, key: string): string {
+  if (!key) return text;
+  let seed = 0;
+  for (let i = 0; i < key.length; i++) {
+    seed = ((seed << 5) - seed + key.charCodeAt(i)) | 0;
+  }
+  seed = Math.abs(seed) + 1;
+
+  let result = '';
+  for (let i = 0; i < text.length; i++) {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    const byte = text.charCodeAt(i);
+    const cipherByte = byte ^ ((seed >>> 16) & 0xFF);
+    result += String.fromCharCode(cipherByte);
+  }
+  return result;
+}
+
+/**
  * Converts standard string to 8-bit binary string
  */
 export function textToBits(text: string): string {
@@ -52,11 +73,12 @@ export function xorChecksum(text: string): number {
 /**
  * Formulates a complete acoustic protocol packet with telemetry metrics
  */
-export function buildPacket(text: string, bitDurationMs: number = 80): PacketBreakdown {
+export function buildPacket(text: string, bitDurationMs: number = 80, channelKey: string = ''): PacketBreakdown {
   const truncatedText = text.slice(0, PROTOCOL.MAX_PAYLOAD_LEN);
-  const lengthBits = byteToBits(truncatedText.length);
-  const dataBits = textToBits(truncatedText);
-  const checksum = xorChecksum(truncatedText);
+  const processedText = cipher(truncatedText, channelKey);
+  const lengthBits = byteToBits(processedText.length);
+  const dataBits = textToBits(processedText);
+  const checksum = xorChecksum(processedText);
   const checksumBits = byteToBits(checksum);
 
   const full =

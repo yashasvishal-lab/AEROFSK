@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Radio, Waves, Settings2, Cpu, Mic, Volume2, Info } from 'lucide-react';
+import { BookOpen, Radio, Waves, Settings2, Cpu, Mic, Volume2, Info, Shield, SignalHigh } from 'lucide-react';
 import { useModem } from '../context/ModemContext';
 
 export const HowItWorksPanel: React.FC = () => {
@@ -106,6 +106,43 @@ export const HowItWorksPanel: React.FC = () => {
                 <span className="text-xs text-slate-400 font-mono">Audio Out</span>
               </div>
             </div>
+          </div>
+        </section>
+
+        <div className="h-px bg-slate-800 w-full" />
+
+        {/* Section 5: Maximizing Range */}
+        <section className="space-y-3">
+          <div className="flex items-center space-x-2 text-rose-400">
+            <SignalHigh className="w-5 h-5" />
+            <h3 className="font-semibold text-base">Maximizing Acoustic Transmission Range</h3>
+          </div>
+          <p className="leading-relaxed">
+            Acoustic range is governed by frequency attenuation, volume, and baud rate. To maximize the distance your signal can travel (even through walls or long corridors):
+          </p>
+          <ul className="list-disc pl-5 space-y-2 text-slate-400 mt-2">
+            <li><strong className="text-slate-200">Lower Frequencies:</strong> High frequencies (like 18kHz) are absorbed easily by air and objects. Low frequencies (like 800Hz) travel much further and diffract around corners.</li>
+            <li><strong className="text-slate-200">Slower Baud Rate:</strong> Increasing the Bit Window Duration (e.g., 120ms per bit) gives the Goertzel algorithm more audio samples to integrate over, significantly increasing the Signal-to-Noise Ratio (SNR) in noisy environments.</li>
+            <li><strong className="text-slate-200">Volume & Hardware:</strong> Turn your device volume to maximum. Laptop speakers generally have higher output than mobile phones.
+            <br/><br/><em>* Select the <strong>"Long-Range Deep Penetration"</strong> preset in Settings for the optimal long-distance configuration.</em></li>
+          </ul>
+        </section>
+
+        <div className="h-px bg-slate-800 w-full" />
+
+        {/* Section 6: Security & Exclusivity */}
+        <section className="space-y-3">
+          <div className="flex items-center space-x-2 text-emerald-400">
+            <Shield className="w-5 h-5" />
+            <h3 className="font-semibold text-base">Security & Site Exclusivity (Encryption)</h3>
+          </div>
+          <p className="leading-relaxed mb-4">
+            By default, the FSK protocol broadcasts raw text in the clear. Anyone with an audio spectrum analyzer could decode your transmission. To ensure exclusivity and safety:
+          </p>
+          <div className="bg-emerald-950/20 border border-emerald-900/50 p-4 rounded-lg">
+            <p className="text-emerald-100/80 text-sm leading-relaxed">
+              You can configure a <strong>Channel Security PIN</strong> in the settings menu. When active, this seeds a Pseudo-Random Number Generator (PRNG) to create a synchronous <strong>XOR Stream Cipher</strong>. The payload is encrypted before it is framed into binary, meaning the broadcast acoustic tones represent encrypted bytes. Only devices running this specific software with the identical PIN can decrypt the packets, ensuring complete privacy and site-exclusive communication over the air.
+            </p>
           </div>
         </section>
 

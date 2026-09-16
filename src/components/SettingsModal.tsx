@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useModem, PROFILE_PRESETS } from '../context/ModemContext';
 import { FrequencyProfile } from '../types';
-import { X, Sliders, Volume2, Radio, Zap, RefreshCw, Check } from 'lucide-react';
+import { X, Sliders, Volume2, Radio, Zap, RefreshCw, Check, Shield } from 'lucide-react';
 
 export const SettingsModal: React.FC = () => {
   const {
@@ -97,6 +97,26 @@ export const SettingsModal: React.FC = () => {
               );
             })}
           </div>
+        </div>
+
+        {/* Channel Security / Encryption */}
+        <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+          <div className="flex items-center space-x-2">
+            <Shield className="w-4 h-4 text-emerald-400" />
+            <span className="text-xs font-semibold text-slate-300 font-mono-code uppercase">
+              Channel Security (Encryption PIN)
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-400">
+            When set, payloads are encrypted via XOR Stream Cipher. Only receivers with the exact same PIN can decode your transmissions, guaranteeing site exclusivity and privacy.
+          </p>
+          <input
+            type="text"
+            placeholder="Enter Secret PIN (e.g. 1234)..."
+            value={config.channelKey}
+            onChange={(e) => updateConfig({ channelKey: e.target.value })}
+            className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-emerald-400 font-mono-code text-xs focus:outline-none focus:border-emerald-500/50"
+          />
         </div>
 
         {/* Custom Frequency Tuning */}

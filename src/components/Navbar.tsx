@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import { useModem, PROFILE_PRESETS } from '../context/ModemContext';
+import { Shield } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const {
@@ -143,6 +144,14 @@ export const Navbar: React.FC = () => {
 
         {/* Right side controls & status */}
         <div className="flex items-center space-x-2.5">
+          {/* Security Status Badge */}
+          {config.channelKey && (
+            <div title="Encrypted Channel Active" className="hidden sm:flex items-center space-x-1.5 text-xs px-2.5 py-1.5 rounded-lg border bg-emerald-500/15 border-emerald-500/40 text-emerald-300 font-medium">
+              <Shield className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">Secure</span>
+            </div>
+          )}
+
           {/* Loopback Mode Toggle */}
           <button
             onClick={toggleLoopback}

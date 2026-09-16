@@ -1,5 +1,5 @@
 import { ModulationConfig, RxLinkState, TelemetryData, ReceivedMessage } from '../types';
-import { PROTOCOL, bitsToText, xorChecksum } from './packetCodec';
+import { PROTOCOL, bitsToText, xorChecksum, cipher } from './packetCodec';
 
 export class AudioModemEngine {
   private ctx: AudioContext | null = null;
@@ -436,17 +436,19 @@ export class AudioModemEngine {
     if (this.rxState === 'READING_CHECKSUM') {
       if (this.rxByteBuffer.length === 8) {
         const receivedChecksum = parseInt(this.rxByteBuffer, 2);
-        const decodedText = bitsToText(this.rxDataBits);
-        const expectedChecksum = xorChecksum(decodedText);
+        const decodedCipherText = bitsToText(this.rxDataBits);
+        const expectedChecksum = xorChecksum(decodedCipherText);
         const isValid = receivedChecksum === expectedChecksum;
         const avgSnrDb =
           this.currentSnrSamples > 0 ? Math.round(this.currentSnrSum / this.currentSnrSamples) : 0;
 
+        const plaintext = isValid ? cipher(decodedCipherText, this.config.channelKey) : decodedCipherText;
+
         const messageRecord: ReceivedMessage = {
           id: Math.random().toString(36).substring(2, 9),
           timestamp: Date.now(),
-          text: decodedText,
-          length: decodedText.length,
+          text: plaintext,
+          length: plaintext.length,
           receivedChecksum,
           expectedChecksum,
           isValid,
@@ -456,8 +458,9 @@ export class AudioModemEngine {
 
         if (isValid) {
           this.setRxState('MESSAGE_OK');
+          const secureBadge = this.config.channelKey ? '[SECURE] ' : '';
           this.onLog?.(
-            `Packet decoded successfully: "${decodedText}" [Checksum: 0x${receivedChecksum.toString(16).toUpperCase()} OK, SNR: ${avgSnrDb}dB]`,
+            `Packet decoded successfully: ${secureBadge}"${plaintext}" [Checksum: 0x${receivedChecksum.toString(16).toUpperCase()} OK, SNR: ${avgSnrDb}dB]`,
             'ok'
           );
         } else {
