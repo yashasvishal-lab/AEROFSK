@@ -1,148 +1,148 @@
 import React from 'react';
-import { BookOpen, Radio, Waves, Settings2, Cpu, Mic, Volume2, Info, Shield, SignalHigh } from 'lucide-react';
 import { useModem } from '../context/ModemContext';
+import { Info, Waves, Cpu, Settings2, SignalHigh, Shield, LockKeyhole, Radio, Network, FileCode2 } from 'lucide-react';
 
 export const HowItWorksPanel: React.FC = () => {
   const { config } = useModem();
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden text-sm">
-      <div className="bg-slate-800/50 p-4 border-b border-slate-700/50 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <BookOpen className="w-5 h-5 text-cyan-400" />
-          <h2 className="text-lg font-bold text-slate-200">How It Works: Acoustic FSK Telemetry</h2>
+    <div className="bg-slate-900/80 backdrop-blur-xl border-l border-slate-800/80 p-6 flex flex-col h-full overflow-y-auto custom-scrollbar">
+      <div className="flex items-center space-x-3 mb-8 pb-4 border-b border-slate-800/80 sticky top-0 bg-slate-900/90 z-10">
+        <div className="p-2.5 bg-indigo-500/20 rounded-xl border border-indigo-500/30">
+          <Info className="w-5 h-5 text-indigo-400" />
+        </div>
+        <div>
+          <h2 className="text-xl font-display font-bold text-slate-100 tracking-tight">System Architecture</h2>
+          <p className="text-xs text-slate-400 font-mono-code mt-1">ACOUSTIC MODEM SPECIFICATION v2.0</p>
         </div>
       </div>
 
-      <div className="p-6 space-y-8 text-slate-300">
+      <div className="space-y-8 text-sm text-slate-300">
         
-        {/* Section 1: Radio vs Sound */}
+        {/* Intro */}
         <section className="space-y-3">
-          <div className="flex items-center space-x-2 text-cyan-300">
-            <Radio className="w-5 h-5" />
-            <h3 className="font-semibold text-base">Sound Waves vs. Radio Waves</h3>
-          </div>
-          <p className="leading-relaxed">
-            Standard web browsers <strong>cannot directly transmit or receive raw radio waves (RF)</strong> because they don't have low-level access to the device's cellular, Wi-Fi, or Bluetooth antennas to broadcast custom signals.
+          <p className="leading-relaxed text-slate-300 text-sm">
+            This workstation is a software-defined acoustic telemetry platform. It allows computers to form a completely offline, vacuum-gapped Mesh Network using only sound waves. It replicates the exact behavior of Radio Frequency (RF) modems without requiring external hardware.
           </p>
-          <div className="bg-cyan-950/30 border border-cyan-900/50 p-4 rounded-lg flex space-x-3 mt-4">
-            <Info className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
-            <p className="text-cyan-100/90 text-sm leading-relaxed">
-              To build a true point-to-point data link entirely in software, this platform uses <strong>Acoustic Waves (Sound)</strong>. Sound behaves exactly like radio telemetry—both are physical waves. We use your device's <strong>Speaker</strong> to transmit and the <strong>Microphone</strong> to receive. This acts as a perfect educational analog for radio frequency (RF) FSK modems without requiring external SDR (Software Defined Radio) hardware.
-            </p>
-          </div>
         </section>
 
-        <div className="h-px bg-slate-800 w-full" />
+        <div className="h-px bg-slate-800/60 w-full" />
 
-        {/* Section 2: FSK Modulation */}
-        <section className="space-y-3">
+        {/* 1. Physical Layer */}
+        <section className="space-y-4">
           <div className="flex items-center space-x-2 text-emerald-400">
             <Waves className="w-5 h-5" />
-            <h3 className="font-semibold text-base">Frequency-Shift Keying (FSK)</h3>
+            <h3 className="font-semibold text-base font-display tracking-wide">Layer 1: Physical (FSK)</h3>
           </div>
           <p className="leading-relaxed">
-            Data is encoded into sound by rapidly switching between two distinct frequencies (tones). This is known as <strong>2-FSK (2-Frequency-Shift Keying)</strong>.
+            Data is serialized into sound using <strong>2-Frequency-Shift Keying (2-FSK)</strong>. The transmitter rapidly alternates between two isolated frequencies to encode binary data into the air.
           </p>
-          <ul className="list-disc pl-5 space-y-2 text-slate-400 mt-2">
-            <li><strong className="text-slate-200">Space (0):</strong> Represented by Frequency 0 ({config.freq0} Hz)</li>
-            <li><strong className="text-slate-200">Mark (1):</strong> Represented by Frequency 1 ({config.freq1} Hz)</li>
-            <li><strong className="text-slate-200">Baud Rate:</strong> The signal switches frequencies every {config.bitDurationMs} milliseconds, resulting in a baud rate of {Math.round(1000 / config.bitDurationMs)} bps.</li>
+          <ul className="list-disc pl-5 space-y-2 text-slate-400 mt-2 font-mono-code text-xs">
+            <li><strong className="text-slate-200">Space (0):</strong> {config.freq0} Hz</li>
+            <li><strong className="text-slate-200">Mark (1):</strong> {config.freq1} Hz</li>
+            <li><strong className="text-slate-200">Baud Rate:</strong> {Math.round(1000 / config.bitDurationMs)} bps ({config.bitDurationMs}ms window)</li>
           </ul>
+          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800/80 mt-3">
+            <div className="flex items-center space-x-2 mb-2">
+              <Cpu className="w-4 h-4 text-purple-400" />
+              <h4 className="font-semibold text-slate-200 text-xs uppercase tracking-wider">The Goertzel Demodulator</h4>
+            </div>
+            <p className="text-slate-400 text-xs leading-relaxed">
+              Instead of computing heavy full-spectrum FFTs, the receiver uses the highly efficient mathematical <strong>Goertzel Algorithm</strong> to isolate and measure energy exclusively at our two target frequencies. The stronger frequency determines the bit.
+            </p>
+          </div>
         </section>
 
-        <div className="h-px bg-slate-800 w-full" />
+        <div className="h-px bg-slate-800/60 w-full" />
 
-        {/* Section 3: The Data Pipeline */}
-        <section className="space-y-3">
+        {/* 2. MAC Layer (CSMA) */}
+        <section className="space-y-4">
           <div className="flex items-center space-x-2 text-amber-400">
-            <Settings2 className="w-5 h-5" />
-            <h3 className="font-semibold text-base">Transmission & Packet Framing</h3>
+            <Radio className="w-5 h-5" />
+            <h3 className="font-semibold text-base font-display tracking-wide">Layer 2: MAC (CSMA/CA)</h3>
           </div>
           <p className="leading-relaxed">
-            To ensure the receiver can lock onto the signal in a noisy room, raw text is serialized into a highly structured binary packet:
+            To prevent packet collisions in a multi-node room, the protocol enforces <strong>Carrier-Sense Multiple Access (Listen-Before-Talk)</strong>. 
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
-              <h4 className="font-semibold text-slate-200 mb-2 border-b border-slate-800 pb-2">1. Preamble & Sync</h4>
-              <p className="text-slate-400 text-sm">
-                The transmitter first sends an alternating pattern of 1s and 0s (e.g., <code>10101010</code>). This "wakes up" the receiver and lets it synchronize its timing. It is followed by a Start Delimiter (<code>0xFF</code>) to mark the beginning of the actual data.
+          <p className="text-xs text-slate-400 leading-relaxed bg-amber-950/20 p-3 rounded-lg border border-amber-900/30">
+            Before engaging the oscillator, the transmitter sweeps the room's noise floor using an FFT. If it detects acoustic energy at $F_0$ or $F_1$ above -55dB, it assumes another node is transmitting, enters a randomized exponential backoff, and queues the packet.
+          </p>
+        </section>
+
+        <div className="h-px bg-slate-800/60 w-full" />
+
+        {/* 3. Transport Layer */}
+        <section className="space-y-4">
+          <div className="flex items-center space-x-2 text-blue-400">
+            <Network className="w-5 h-5" />
+            <h3 className="font-semibold text-base font-display tracking-wide">Layer 3: Transport (ARQ & CRC-16)</h3>
+          </div>
+          <div className="grid grid-cols-1 gap-3">
+            <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800/80">
+              <h4 className="font-semibold text-slate-200 text-xs uppercase tracking-wider mb-2">Mathematical Integrity (CRC-16)</h4>
+              <p className="text-slate-400 text-xs leading-relaxed">
+                Every packet includes a 16-bit Cyclic Redundancy Check (CRC-16-CCITT). If acoustic interference flips a single audio bit in transit, the checksum validation fails instantly, guaranteeing zero corrupted data is processed.
               </p>
             </div>
-            <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
-              <h4 className="font-semibold text-slate-200 mb-2 border-b border-slate-800 pb-2">2. Payload & Validation</h4>
-              <p className="text-slate-400 text-sm">
-                The text is converted to UTF-8 binary and transmitted. A simple XOR Parity Checksum is calculated and sent at the end, allowing the receiver to verify data integrity before accepting it.
+            <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800/80">
+              <h4 className="font-semibold text-slate-200 text-xs uppercase tracking-wider mb-2">Guaranteed Delivery (ARQ)</h4>
+              <p className="text-slate-400 text-xs leading-relaxed">
+                File transfers utilize Automatic Repeat reQuest. The transmitter sends a data chunk and pauses. The receiver validates the CRC-16 and fires back a targeted Acoustic ACK tone. If the ACK is destroyed by room noise, the transmitter auto-retries the chunk.
               </p>
             </div>
           </div>
         </section>
 
-        <div className="h-px bg-slate-800 w-full" />
+        <div className="h-px bg-slate-800/60 w-full" />
 
-        {/* Section 4: DSP & Goertzel */}
-        <section className="space-y-3">
-          <div className="flex items-center space-x-2 text-purple-400">
-            <Cpu className="w-5 h-5" />
-            <h3 className="font-semibold text-base">Digital Signal Processing (DSP)</h3>
-          </div>
-          <p className="leading-relaxed mb-4">
-            The receiver uses the Web Audio API (<code>AudioWorklet</code>) to process microphone samples at precisely 48,000 times per second, ensuring zero Javascript timer jitter.
-          </p>
-          <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 flex flex-col md:flex-row gap-4 items-start">
-            <div className="flex-1">
-              <h4 className="font-semibold text-slate-200 mb-1">The Goertzel Algorithm</h4>
-              <p className="text-slate-400 text-sm">
-                Instead of running a heavy Fast Fourier Transform (FFT) over the entire audio spectrum, the receiver uses the highly efficient Goertzel Algorithm. It mathematically measures the precise energy present at <em>only</em> our two target frequencies ({config.freq0} Hz and {config.freq1} Hz). The stronger frequency wins and determines if a '1' or '0' was sent.
-              </p>
-            </div>
-            <div className="flex space-x-4">
-              <div className="flex flex-col items-center justify-center p-3 bg-slate-900 rounded border border-slate-800">
-                <Mic className="w-6 h-6 text-slate-500 mb-2" />
-                <span className="text-xs text-slate-400 font-mono">Audio In</span>
-              </div>
-              <div className="flex flex-col items-center justify-center p-3 bg-slate-900 rounded border border-slate-800">
-                <Volume2 className="w-6 h-6 text-slate-500 mb-2" />
-                <span className="text-xs text-slate-400 font-mono">Audio Out</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <div className="h-px bg-slate-800 w-full" />
-
-        {/* Section 5: Maximizing Range */}
-        <section className="space-y-3">
-          <div className="flex items-center space-x-2 text-rose-400">
-            <SignalHigh className="w-5 h-5" />
-            <h3 className="font-semibold text-base">Maximizing Acoustic Transmission Range</h3>
-          </div>
-          <p className="leading-relaxed">
-            Acoustic range is governed by frequency attenuation, volume, and baud rate. To maximize the distance your signal can travel (even through walls or long corridors):
-          </p>
-          <ul className="list-disc pl-5 space-y-2 text-slate-400 mt-2">
-            <li><strong className="text-slate-200">Lower Frequencies:</strong> High frequencies (like 18kHz) are absorbed easily by air and objects. Low frequencies (like 800Hz) travel much further and diffract around corners.</li>
-            <li><strong className="text-slate-200">Slower Baud Rate:</strong> Increasing the Bit Window Duration (e.g., 120ms per bit) gives the Goertzel algorithm more audio samples to integrate over, significantly increasing the Signal-to-Noise Ratio (SNR) in noisy environments.</li>
-            <li><strong className="text-slate-200">Volume & Hardware:</strong> Turn your device volume to maximum. Laptop speakers generally have higher output than mobile phones.
-            <br/><br/><em>* Select the <strong>"Long-Range Deep Penetration"</strong> preset in Settings for the optimal long-distance configuration.</em></li>
-          </ul>
-        </section>
-
-        <div className="h-px bg-slate-800 w-full" />
-
-        {/* Section 6: Security & Exclusivity */}
-        <section className="space-y-3">
+        {/* 4. Security Layer */}
+        <section className="space-y-4">
           <div className="flex items-center space-x-2 text-emerald-400">
             <Shield className="w-5 h-5" />
-            <h3 className="font-semibold text-base">Security & Site Exclusivity (Encryption)</h3>
+            <h3 className="font-semibold text-base font-display tracking-wide">Layer 4: Military-Grade Security</h3>
           </div>
           <p className="leading-relaxed mb-4">
-            By default, the FSK protocol broadcasts raw text in the clear. Anyone with an audio spectrum analyzer could decode your transmission. To ensure exclusivity and safety:
+            If you utilize the <strong>Transmit Secure</strong> feature, the modem performs an autonomous, over-the-air cryptographic handshake establishing Perfect Forward Secrecy.
           </p>
-          <div className="bg-emerald-950/20 border border-emerald-900/50 p-4 rounded-lg">
-            <p className="text-emerald-100/80 text-sm leading-relaxed">
-              You can configure a <strong>Channel Security PIN</strong> in the settings menu. When active, this seeds a Pseudo-Random Number Generator (PRNG) to create a synchronous <strong>XOR Stream Cipher</strong>. The payload is encrypted before it is framed into binary, meaning the broadcast acoustic tones represent encrypted bytes. Only devices running this specific software with the identical PIN can decrypt the packets, ensuring complete privacy and site-exclusive communication over the air.
-            </p>
+          <div className="bg-emerald-950/10 border border-emerald-900/40 p-4 rounded-xl">
+             <div className="flex items-center space-x-2 mb-3">
+               <LockKeyhole className="w-4 h-4 text-emerald-400" />
+               <span className="font-mono-code text-xs text-emerald-400 font-bold">ELLIPTIC-CURVE DIFFIE-HELLMAN (P-256)</span>
+             </div>
+             <ul className="text-xs text-slate-400 space-y-2 list-none">
+                <li className="flex space-x-2"><span className="text-emerald-500">1.</span><span>Nodes autonomously generate ephemeral P-256 Keypairs.</span></li>
+                <li className="flex space-x-2"><span className="text-emerald-500">2.</span><span>Public keys are exchanged as raw binary over sound waves.</span></li>
+                <li className="flex space-x-2"><span className="text-emerald-500">3.</span><span>Both nodes derive the identical AES-256 secret.</span></li>
+                <li className="flex space-x-2"><span className="text-emerald-500">4.</span><span>Payload is encrypted via AES-256-GCM and transmitted.</span></li>
+             </ul>
+             <p className="mt-3 text-[10px] text-emerald-500/70 uppercase tracking-wider">Even if the audio is recorded, the math is virtually uncrackable.</p>
+          </div>
+        </section>
+
+        <div className="h-px bg-slate-800/60 w-full" />
+
+        {/* 5. Future Roadmap */}
+        <section className="space-y-4 pb-8">
+          <div className="flex items-center space-x-2 text-rose-400">
+            <FileCode2 className="w-5 h-5" />
+            <h3 className="font-semibold text-base font-display tracking-wide">The Future Frontier</h3>
+          </div>
+          <p className="leading-relaxed">
+            The web browser environment limits digital signal processing due to JavaScript garbage collection jitter. To push the boundaries of acoustic telemetry further, the next evolution requires a structural paradigm shift:
+          </p>
+          <div className="space-y-3 mt-3">
+             <div className="p-3 rounded-lg bg-slate-900 border border-slate-800">
+                <strong className="block text-slate-200 text-xs uppercase mb-1">Native Rust SIMD Core</strong>
+                <p className="text-[11px] text-slate-500">Abandoning JS for a low-level Systems language utilizing Single Instruction Multiple Data (SIMD) hardware acceleration for deterministic, zero-latency audio driver access.</p>
+             </div>
+             <div className="p-3 rounded-lg bg-slate-900 border border-slate-800">
+                <strong className="block text-slate-200 text-xs uppercase mb-1">OFDM Modulation</strong>
+                <p className="text-[11px] text-slate-500">Orthogonal Frequency-Division Multiplexing. Calculating heavy Fast Fourier Transforms to transmit on 64+ simultaneous frequencies, pushing bandwidth from bytes/sec to kilobytes/sec.</p>
+             </div>
+             <div className="p-3 rounded-lg bg-slate-900 border border-slate-800">
+                <strong className="block text-slate-200 text-xs uppercase mb-1">Chirp Spread Spectrum (CSS)</strong>
+                <p className="text-[11px] text-slate-500">Transitioning from static tones to sweeping ultrasonic chirps (LoRa/Sonar) to completely eliminate multipath fading (echoes) and maximize range.</p>
+             </div>
           </div>
         </section>
 

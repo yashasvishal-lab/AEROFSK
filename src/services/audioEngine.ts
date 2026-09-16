@@ -1,5 +1,5 @@
 import { ModulationConfig, RxLinkState, TelemetryData, ReceivedMessage } from '../types';
-import { PROTOCOL, bitsToText, xorChecksum, cipher } from './packetCodec';
+import { PROTOCOL, bitsToBytes, crc16 } from './packetCodec';
 
 export class AudioModemEngine {
   private ctx: AudioContext | null = null;
@@ -400,7 +400,7 @@ export class AudioModemEngine {
     }
 
     if (this.rxState === 'READING_LENGTH') {
-      if (this.rxByteBuffer.length === 8) {
+      if (this.rxByteBuffer.length === 16) {
         this.rxExpectedLen = parseInt(this.rxByteBuffer, 2);
         this.rxByteBuffer = '';
         this.rxDataBits = '';
@@ -434,46 +434,53 @@ export class AudioModemEngine {
     }
 
     if (this.rxState === 'READING_CHECKSUM') {
-      if (this.rxByteBuffer.length === 8) {
+      if (this.rxByteBuffer.length === 16) {
         const receivedChecksum = parseInt(this.rxByteBuffer, 2);
-        const decodedCipherText = bitsToText(this.rxDataBits);
-        const expectedChecksum = xorChecksum(decodedCipherText);
+        const processedBytes = bitsToBytes(this.rxDataBits);
+        const expectedChecksum = crc16(processedBytes);
         const isValid = receivedChecksum === expectedChecksum;
         const avgSnrDb =
           this.currentSnrSamples > 0 ? Math.round(this.currentSnrSum / this.currentSnrSamples) : 0;
 
-        const plaintext = isValid ? cipher(decodedCipherText, this.config.channelKey) : decodedCipherText;
+        (async () => {
+          try {
+            const plaintextBytes = processedBytes;
+            
+            const messageRecord = {
+              id: Math.random().toString(36).substring(2, 9),
+              timestamp: Date.now(),
+              text: "BINARY_PAYLOAD", 
+              bytes: plaintextBytes,
+              length: plaintextBytes.length,
+              receivedChecksum,
+              expectedChecksum,
+              isValid,
+              rawBits: this.rxDataBits,
+              snrSnapshotDb: avgSnrDb,
+            };
 
-        const messageRecord: ReceivedMessage = {
-          id: Math.random().toString(36).substring(2, 9),
-          timestamp: Date.now(),
-          text: plaintext,
-          length: plaintext.length,
-          receivedChecksum,
-          expectedChecksum,
-          isValid,
-          rawBits: this.rxDataBits,
-          snrSnapshotDb: avgSnrDb,
-        };
+            if (isValid) {
+              this.setRxState('MESSAGE_OK');
+              this.onLog?.(
+                `Packet CRC-16 matched. Forwarding to transport layer... [SNR: ${avgSnrDb}dB]`,
+                'ok'
+              );
+            } else {
+              this.setRxState('CHECKSUM_ERROR');
+              this.onLog?.(
+                `CRC-16 mismatch! R: 0x${receivedChecksum.toString(16)} E: 0x${expectedChecksum.toString(16)}`,
+                'error'
+              );
+            }
 
-        if (isValid) {
-          this.setRxState('MESSAGE_OK');
-          const secureBadge = this.config.channelKey ? '[SECURE] ' : '';
-          this.onLog?.(
-            `Packet decoded successfully: ${secureBadge}"${plaintext}" [Checksum: 0x${receivedChecksum.toString(16).toUpperCase()} OK, SNR: ${avgSnrDb}dB]`,
-            'ok'
-          );
-        } else {
-          this.setRxState('CHECKSUM_ERROR');
-          this.onLog?.(
-            `Checksum integrity error! Received: 0x${receivedChecksum.toString(16).toUpperCase()}, expected: 0x${expectedChecksum.toString(16).toUpperCase()}`,
-            'error'
-          );
-        }
-
-        this.onMessageReceived?.(messageRecord);
+            this.onMessageReceived?.(messageRecord);
+          } catch(e) {
+             this.onLog?.("Decryption failed (AES-GCM). Wrong PIN?", "error");
+          }
+        })();
+        
         this.rxByteBuffer = '';
-        setTimeout(() => this.reHunt(), 1200);
+        setTimeout(() => this.reHunt(), 500);
       }
       return;
     }
@@ -485,6 +492,15 @@ export class AudioModemEngine {
   }
 
   // ------------------ TRANSMITTER ------------------
+  public async checkChannelClear(): Promise<boolean> {
+    if (!this.analyser) return true;
+    const data = new Float32Array(this.analyser.frequencyBinCount);
+    this.analyser.getFloatFrequencyData(data);
+    const binHz = this.ctx.sampleRate / this.analyser.fftSize;
+    const getEnergy = (freq) => data[Math.round(freq / binHz)];
+    return getEnergy(this.config.freq0) < -55 && getEnergy(this.config.freq1) < -55;
+  }
+
   public async transmitBitstream(
     bits: string,
     onProgress?: (progress: number, currentBit: string, bitIndex: number) => void
@@ -494,6 +510,16 @@ export class AudioModemEngine {
       await ctx.resume();
     }
 
+    let isClear = false;
+    let attempts = 0;
+    while (!isClear && attempts < 8) {
+      isClear = await this.checkChannelClear();
+      if (!isClear) {
+         this.onLog?.('CSMA/CA: Channel busy (Carrier detected). Backing off...', 'warn');
+         await new Promise(r => setTimeout(r, 400 + Math.random() * 400));
+         attempts++;
+      }
+    }
     const bitDurSec = this.config.bitDurationMs / 1000;
     const startTime = ctx.currentTime + 0.1; // 100ms lead-in
     const totalDurationSec = bits.length * bitDurSec;
@@ -604,5 +630,64 @@ export class AudioModemEngine {
       }
       this.testToneOsc = null;
     }
+  }
+
+  public async runAutoCalibration(durationMs: number = 2000, onProgress: (p: number) => void): Promise<{freq0: number, freq1: number, noiseFloor: number}> {
+    return new Promise((resolve, reject) => {
+      if (!this.analyser || !this.ctx) { 
+        reject(new Error("Microphone not active")); 
+        return; 
+      }
+      
+      const binCount = this.analyser.frequencyBinCount;
+      const floatData = new Float32Array(binCount);
+      const averages = new Float32Array(binCount);
+      let samples = 0;
+      
+      const startTime = Date.now();
+      const interval = setInterval(() => {
+        const now = Date.now();
+        const elapsed = now - startTime;
+        onProgress(Math.min(100, (elapsed / durationMs) * 100));
+        
+        this.analyser!.getFloatFrequencyData(floatData);
+        for(let i=0; i<binCount; i++) {
+          const linear = Math.pow(10, floatData[i] / 20);
+          averages[i] += linear;
+        }
+        samples++;
+        
+        if (elapsed >= durationMs) {
+          clearInterval(interval);
+          for(let i=0; i<binCount; i++) averages[i] /= samples;
+          
+          const sampleRate = this.ctx!.sampleRate;
+          const binHz = sampleRate / this.analyser!.fftSize;
+          
+          let bestStartFreq = 0;
+          let minNoise = Infinity;
+          
+          const startBinLimit = Math.floor(2000 / binHz); // Start looking at 2kHz
+          const endBinLimit = Math.floor(18000 / binHz); // Stop looking at 18kHz
+          const bandBins = Math.floor(1500 / binHz); // Looking for a quiet 1.5kHz spread
+          
+          for (let i = startBinLimit; i < endBinLimit - bandBins; i++) {
+            let currentNoise = 0;
+            for(let j=0; j<bandBins; j++) currentNoise += averages[i+j];
+            if (currentNoise < minNoise) {
+              minNoise = currentNoise;
+              bestStartFreq = i * binHz;
+            }
+          }
+          
+          const noiseFloorDb = 20 * Math.log10(minNoise / bandBins);
+          resolve({
+            freq0: Math.round(bestStartFreq + 200),
+            freq1: Math.round(bestStartFreq + 1200), // 1kHz separation
+            noiseFloor: noiseFloorDb
+          });
+        }
+      }, 50);
+    });
   }
 }

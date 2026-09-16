@@ -1,62 +1,93 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { Send, Square, TerminalSquare, Layers, Search, FileUp, Network, LockKeyhole } from 'lucide-react';
 import { useModem } from '../context/ModemContext';
-import { buildPacket } from '../services/packetCodec';
-import { Send, Square, Sparkles, Layers, Volume2, Info, Check } from 'lucide-react';
+import { buildPacket, buildTransportPacket } from '../services/packetCodec';
 
-const PRESET_MESSAGES = [
-  'Hello World!',
-  'Acoustic Telemetry Link OK',
-  'GPS: 37.7749,-122.4194',
-  'PING-200-ACK',
-  'SOS-BEACON-3.1415',
-];
+const PRESET_MESSAGES = ['PING', 'ACK', 'TELEMETRY_DATA_SYNC', 'HELLO_WORLD'];
 
 export const TransmitterPanel: React.FC = () => {
-  const { config, transmitMessage, stopTransmission, isTransmitting, txProgress } = useModem();
-  const [message, setMessage] = useState<string>('Hello World!');
+  const { transmitMessage, transmitSecureMessage, transmitFile, isTransmitting, txProgress, config, myNodeId, stopTransmission } = useModem();
+  const [message, setMessage] = useState<string>('PING');
+  const [targetId, setTargetId] = useState<number>(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const packet = buildPacket(message, config.bitDurationMs);
-
-  const handleSend = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || isTransmitting) return;
-    await transmitMessage(message);
+    if (message.trim() && !isTransmitting) {
+      transmitMessage(message.trim(), targetId);
+    }
   };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      transmitFile(file, targetId);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // Only for UI preview purposes
+  // packet preview removed because it is now async
+  const packet = null; // buildTransportPacket(targetId, myNodeId, 0, 1, 1, message, config.channelKey, config.bitDurationMs);
 
   return (
     <div className="space-y-4">
-      {/* Transmitter Composer Card */}
-      <div className="p-5 rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md shadow-xl">
+      {/* Primary Input Container */}
+      <div className="p-5 rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md relative overflow-hidden group">
+        <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-            <h2 className="font-display font-bold text-lg text-slate-100 uppercase tracking-wide">
-              Acoustic Packet Transmitter
-            </h2>
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-emerald-500/20 rounded-lg border border-emerald-500/30">
+              <TerminalSquare className="w-4 h-4 text-emerald-400" />
+            </div>
+            <h2 className="font-display font-semibold text-lg text-slate-100">Transmitter Console</h2>
           </div>
-          <span className="text-xs font-mono-code text-slate-400">
-            Carrier: {config.freq0}Hz / {config.freq1}Hz
-          </span>
+          <div className="flex items-center space-x-2">
+            <Network className="w-4 h-4 text-cyan-400" />
+            <span className="text-xs font-mono-code text-cyan-400">My Node ID: {myNodeId}</span>
+          </div>
         </div>
 
-        <form onSubmit={handleSend} className="space-y-4">
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label htmlFor="payloadInput" className="text-xs font-medium text-slate-300">
-                Payload Text
+        <form onSubmit={handleSubmit} className="space-y-4 relative z-10">
+          
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+             {/* Target Addressing */}
+             <div className="sm:col-span-1">
+              <label htmlFor="targetInput" className="block text-xs font-medium text-slate-300 mb-1.5">
+                Target Node ID
               </label>
-              <span className="text-[11px] font-mono-code text-slate-400">
-                {message.length} / 64 characters
-              </span>
+              <select
+                id="targetInput"
+                value={targetId}
+                onChange={(e) => setTargetId(Number(e.target.value))}
+                disabled={isTransmitting}
+                className="w-full px-3 py-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 font-mono-code text-sm focus:outline-none focus:border-cyan-400/80 focus:ring-1 focus:ring-cyan-400/40 disabled:opacity-50"
+              >
+                <option value={0}>0 (Broadcast)</option>
+                {Array.from({length: 254}).map((_, i) => (
+                   <option key={i+1} value={i+1}>{i+1}</option>
+                ))}
+              </select>
             </div>
-            <div className="relative">
+
+            {/* Main Text Input */}
+            <div className="sm:col-span-3">
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="payloadInput" className="text-xs font-medium text-slate-300">
+                  Payload Text
+                </label>
+                <span className="text-[11px] font-mono-code text-slate-400">
+                  {message.length} / 64 characters
+                </span>
+              </div>
               <input
                 id="payloadInput"
                 type="text"
                 value={message}
                 maxLength={64}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Type alphanumeric acoustic message..."
+                placeholder="Type alphanumeric message..."
                 disabled={isTransmitting}
                 className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 font-mono-code text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-400/80 focus:ring-1 focus:ring-cyan-400/40 transition-all disabled:opacity-50"
               />
@@ -64,10 +95,7 @@ export const TransmitterPanel: React.FC = () => {
           </div>
 
           {/* Quick Preset Badges */}
-          <div>
-            <span className="text-[11px] font-mono-code text-slate-500 uppercase tracking-wider block mb-2">
-              Preset Payloads:
-            </span>
+          <div className="flex items-center justify-between">
             <div className="flex flex-wrap gap-1.5">
               {PRESET_MESSAGES.map((preset) => (
                 <button
@@ -81,19 +109,53 @@ export const TransmitterPanel: React.FC = () => {
                 </button>
               ))}
             </div>
+            
+            <div>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                onChange={handleFileChange}
+                disabled={isTransmitting}
+              />
+              <button 
+                type="button" 
+                disabled={isTransmitting}
+                onClick={() => fileInputRef.current?.click()}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/30 flex items-center space-x-1.5 disabled:opacity-50 transition-colors"
+              >
+                <FileUp className="w-3.5 h-3.5" />
+                <span>Send File (Max 64KB)</span>
+              </button>
+            </div>
           </div>
 
           {/* Transmission Action Button & Real-Time Progress */}
+          
+          {/* Transmission Action Button & Real-Time Progress */}
           <div className="pt-2">
             {!isTransmitting ? (
-              <button
-                type="submit"
-                disabled={!message.trim()}
-                className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-display font-bold text-sm tracking-wider uppercase bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 hover:brightness-110 shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Send className="w-4 h-4" />
-                <span>Transmit Over Audio</span>
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  onClick={() => transmitMessage(message.trim(), targetId)}
+                  disabled={!message.trim()}
+                  className="flex-1 px-6 py-3.5 rounded-xl font-display font-bold text-sm tracking-wider uppercase bg-slate-800 text-slate-100 hover:bg-slate-700 transition-all flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>Transmit Clear</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => transmitSecureMessage(message.trim(), targetId)}
+                  disabled={!message.trim() || targetId === 0}
+                  className="flex-1 px-6 py-3.5 rounded-xl font-display font-bold text-sm tracking-wider uppercase bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 hover:brightness-110 shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={targetId === 0 ? "Target an explicit Node ID to use ECDH Security" : "Initiate ECDH Handshake and transmit encrypted"}
+                >
+                  <LockKeyhole className="w-4 h-4" />
+                  <span>Transmit Secure</span>
+                </button>
+              </div>
             ) : (
               <div className="space-y-3 p-4 rounded-xl bg-slate-950 border border-emerald-500/30">
                 <div className="flex items-center justify-between text-xs font-mono-code">
@@ -105,7 +167,6 @@ export const TransmitterPanel: React.FC = () => {
                     {txProgress.bitIndex} / {txProgress.totalBits} Bits ({txProgress.percent}%)
                   </span>
                 </div>
-
                 {/* Progress bar */}
                 <div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
                   <div
@@ -113,7 +174,6 @@ export const TransmitterPanel: React.FC = () => {
                     style={{ width: `${txProgress.percent}%` }}
                   />
                 </div>
-
                 <div className="flex items-center justify-between text-xs font-mono-code pt-1">
                   <span className="text-slate-400">
                     Active Carrier:{' '}
@@ -121,7 +181,6 @@ export const TransmitterPanel: React.FC = () => {
                       {txProgress.currentBit === '1' ? config.freq1 : config.freq0} Hz (Bit '{txProgress.currentBit}')
                     </strong>
                   </span>
-
                   <button
                     type="button"
                     onClick={stopTransmission}
@@ -135,75 +194,6 @@ export const TransmitterPanel: React.FC = () => {
             )}
           </div>
         </form>
-      </div>
-
-      {/* Packet Serialization Breakdown */}
-      <div className="p-5 rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-2">
-            <Layers className="w-4 h-4 text-cyan-400" />
-            <h3 className="font-display font-semibold text-sm text-slate-200 uppercase tracking-wide">
-              Packet Framing Architecture
-            </h3>
-          </div>
-          <span className="text-xs font-mono-code text-slate-400">
-            Duration: {(packet.totalDurationMs / 1000).toFixed(2)}s · {packet.full.length} bits
-          </span>
-        </div>
-
-        {/* Structured Segment Blocks */}
-        <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 mb-4">
-          <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-            <span className="text-[10px] font-mono-code text-slate-400 block">PREAMBLE (16b)</span>
-            <span className="text-xs font-mono-code font-bold text-amber-400 truncate block">10101010...</span>
-          </div>
-
-          <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-            <span className="text-[10px] font-mono-code text-slate-400 block">START (8b)</span>
-            <span className="text-xs font-mono-code font-bold text-cyan-400 block">11111111 (0xFF)</span>
-          </div>
-
-          <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-            <span className="text-[10px] font-mono-code text-slate-400 block">LENGTH (8b)</span>
-            <span className="text-xs font-mono-code font-bold text-blue-400 block">
-              {packet.lengthBits} ({packet.payloadLength}B)
-            </span>
-          </div>
-
-          <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 sm:col-span-1">
-            <span className="text-[10px] font-mono-code text-slate-400 block">PAYLOAD ({packet.payloadLength * 8}b)</span>
-            <span className="text-xs font-mono-code font-bold text-emerald-400 truncate block">
-              {packet.payloadLength} chars
-            </span>
-          </div>
-
-          <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-            <span className="text-[10px] font-mono-code text-slate-400 block">CRC XOR (8b)</span>
-            <span className="text-xs font-mono-code font-bold text-indigo-400 block">
-              {packet.checksumBits} (0x{packet.checksum.toString(16).toUpperCase()})
-            </span>
-          </div>
-
-          <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-            <span className="text-[10px] font-mono-code text-slate-400 block">END FLAG (8b)</span>
-            <span className="text-xs font-mono-code font-bold text-slate-400 block">00000000 (0x00)</span>
-          </div>
-        </div>
-
-        {/* Full Bitstream Raw Stream Preview */}
-        <div>
-          <span className="text-[11px] font-mono-code text-slate-400 uppercase tracking-wider block mb-1">
-            Complete Transmit Bitstream:
-          </span>
-          <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 font-mono-code text-xs tracking-wider text-slate-300 break-all max-h-24 overflow-y-auto leading-relaxed">
-            <span className="text-amber-400">{packet.preamble}</span>
-            <span className="text-cyan-400">{packet.startMarker}</span>
-            <span className="text-blue-400">{packet.lengthBits}</span>
-            <span className="text-emerald-300">{packet.dataBits}</span>
-            <span className="text-indigo-400">{packet.checksumBits}</span>
-            <span className="text-slate-500">{packet.endMarker}</span>
-          </div>
-        </div>
       </div>
     </div>
   );

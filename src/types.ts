@@ -13,6 +13,21 @@ export interface ModulationConfig {
   channelKey: string; // Encryption PIN/passphrase
 }
 
+export interface NodeIdentity {
+  id: number;
+}
+
+export interface FileTransferState {
+  msgId: number;
+  filename: string;
+  mimeType: string;
+  totalChunks: number;
+  chunks: Record<number, string>;
+  completed: boolean;
+  dataUrl?: string;
+  progress: number;
+}
+
 export type RxLinkState =
   | 'OFFLINE'
   | 'IDLE'
@@ -65,6 +80,10 @@ export interface ReceivedMessage {
   isValid: boolean;
   rawBits: string;
   snrSnapshotDb: number;
+  senderId?: number;
+  targetId?: number;
+  bytes?: Uint8Array;
+  isFile?: boolean;
 }
 
 export interface LogEntry {

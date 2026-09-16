@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useModem } from '../context/ModemContext';
-import { buildPacket, xorChecksum, textToBits } from '../services/packetCodec';
+import { crc16, textToBytes, bytesToBits } from '../services/packetCodec';
 import { X, FileCode2, Binary, ShieldCheck, Check, Sparkles } from 'lucide-react';
 
 export const PacketInspectorModal: React.FC = () => {

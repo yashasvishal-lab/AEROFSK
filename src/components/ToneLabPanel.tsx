@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useModem } from '../context/ModemContext';
-import { Play, Square, Volume2, Sliders, Activity, CheckCircle2 } from 'lucide-react';
+import { Play, Square, Volume2, Sliders, Activity, CheckCircle2, Radar } from 'lucide-react';
 
 export const ToneLabPanel: React.FC = () => {
   const {
@@ -12,10 +12,12 @@ export const ToneLabPanel: React.FC = () => {
     telemetry,
     isListening,
     startListening,
+    runAutoCalibration
   } = useModem();
 
   const [sliderFreq, setSliderFreq] = useState<number>(config.freq0);
   const [toneVolume, setToneVolume] = useState<number>(config.txVolume);
+  const [isCalibrating, setIsCalibrating] = useState(false);
 
   const handlePlayCustom = () => {
     playTestTone(sliderFreq);
@@ -29,6 +31,15 @@ export const ToneLabPanel: React.FC = () => {
   const handlePlayF1 = () => {
     setSliderFreq(config.freq1);
     playTestTone(config.freq1);
+  };
+  
+  const handleCalibrate = async () => {
+     if (!isListening) {
+       await startListening();
+     }
+     setIsCalibrating(true);
+     await runAutoCalibration();
+     setIsCalibrating(false);
   };
 
   return (
@@ -46,10 +57,20 @@ export const ToneLabPanel: React.FC = () => {
             {testToneActive ? 'EMITTING TONE' : 'CARRIER IDLE'}
           </span>
         </div>
-
-        <p className="text-xs text-slate-400 mb-6">
-          Emit precise carrier tones to verify hardware speaker frequency response and test microphone pickup sensitivity before launching transmissions.
-        </p>
+        
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+           <p className="text-xs text-slate-400 flex-1">
+             Emit precise carrier tones to verify hardware speaker frequency response and test microphone pickup sensitivity before launching transmissions.
+           </p>
+           <button
+             onClick={handleCalibrate}
+             disabled={isCalibrating}
+             className="px-4 py-2 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/30 flex items-center justify-center space-x-2 transition-all disabled:opacity-50"
+           >
+             <Radar className={`w-4 h-4 ${isCalibrating ? 'animate-spin' : ''}`} />
+             <span className="text-xs font-bold uppercase tracking-wider">{isCalibrating ? 'Scanning...' : 'Auto-Calibrate Environment'}</span>
+           </button>
+        </div>
 
         {/* Quick Tone Buttons */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
@@ -73,7 +94,6 @@ export const ToneLabPanel: React.FC = () => {
               )}
             </div>
           </button>
-
           <button
             onClick={testToneActive && activeToneFreq === config.freq1 ? stopTestTone : handlePlayF1}
             className={`p-4 rounded-xl border transition-all flex items-center justify-between ${
@@ -104,7 +124,6 @@ export const ToneLabPanel: React.FC = () => {
             </label>
             <span className="font-mono-code text-base font-bold text-cyan-400">{sliderFreq} Hz</span>
           </div>
-
           <input
             id="freqSlider"
             type="range"
@@ -119,13 +138,11 @@ export const ToneLabPanel: React.FC = () => {
             }}
             className="w-full accent-cyan-400 cursor-pointer"
           />
-
           <div className="flex items-center justify-between text-[11px] font-mono-code text-slate-500">
             <span>200 Hz (Sub-audio)</span>
             <span>10 kHz (Audible)</span>
             <span>21.5 kHz (Near-ultrasound)</span>
           </div>
-
           <div className="flex items-center space-x-3 pt-2">
             {!testToneActive ? (
               <button
@@ -144,7 +161,6 @@ export const ToneLabPanel: React.FC = () => {
                 <span>Silence Tone</span>
               </button>
             )}
-
             {!isListening && (
               <button
                 onClick={startListening}
@@ -165,7 +181,6 @@ export const ToneLabPanel: React.FC = () => {
             Live Roundtrip Acoustic Telemetry
           </h3>
         </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
             <span className="text-[10px] font-mono-code text-slate-400 block">MICROPHONE STATUS</span>
@@ -173,14 +188,12 @@ export const ToneLabPanel: React.FC = () => {
               {isListening ? 'STREAMING ACTIVE' : 'OFFLINE'}
             </span>
           </div>
-
           <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
             <span className="text-[10px] font-mono-code text-slate-400 block">DETECTED DOMINANT PEAK</span>
             <span className="text-xs font-mono-code font-bold text-cyan-400">
               {isListening && telemetry.detectedFreq > 0 ? `${telemetry.detectedFreq} Hz` : 'Quiet / Noise'}
             </span>
           </div>
-
           <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
             <span className="text-[10px] font-mono-code text-slate-400 block">CONFIDENCE METRIC</span>
             <span className="text-xs font-mono-code font-bold text-slate-300">

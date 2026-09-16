@@ -1,30 +1,19 @@
 import React, { useState } from 'react';
+import { Mic, MicOff, Activity, Copy, Check, Binary, Sparkles, CheckCircle2, XCircle, Trash2, Radio, Network, FileDown, ShieldCheck, Lock } from 'lucide-react';
 import { useModem } from '../context/ModemContext';
-import {
-  Mic,
-  MicOff,
-  CheckCircle2,
-  XCircle,
-  Copy,
-  Check,
-  Radio,
-  Binary,
-  Cpu,
-  ArrowRight,
-  Clock,
-  Sparkles,
-  Trash2,
-} from 'lucide-react';
 
 export const ReceiverPanel: React.FC = () => {
   const {
+    rxState,
     isListening,
     startListening,
     stopListening,
-    rxState,
     telemetry,
     messages,
+    fileTransfers,
     clearMessages,
+    myNodeId,
+    config
   } = useModem();
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -35,63 +24,52 @@ export const ReceiverPanel: React.FC = () => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const getStageDetail = () => {
+    switch (rxState) {
+      case 'OFFLINE': return 'Offline';
+      case 'IDLE': return 'Idle / No Signal';
+      case 'HUNTING': return 'Scanning for Preamble...';
+      case 'SYNCED': return 'Carrier Lock Achieved';
+      case 'READING_START': return 'Start Delimiter Found';
+      case 'READING_LENGTH': return 'Parsing Header...';
+      case 'READING_DATA': return `Reading Payload...`;
+      case 'READING_CHECKSUM': return 'Verifying Checksum...';
+      case 'MESSAGE_OK': return 'Packet Received OK';
+      case 'CHECKSUM_ERROR': return 'Packet CRC Failed';
+      default: return rxState;
+    }
+  };
+
   const pipelineStages = [
-    {
-      id: 'detect',
-      label: 'CARRIER DETECT',
-      active: isListening,
-      detail: isListening ? `${telemetry.detectedFreq || 0} Hz` : 'OFFLINE',
-    },
-    {
-      id: 'sync',
-      label: 'PREAMBLE SYNC',
-      active: telemetry.correlationScore >= 14 || rxState !== 'HUNTING' && rxState !== 'OFFLINE',
-      detail: `${telemetry.correlationScore}/16 bits`,
-    },
-    {
-      id: 'frame',
-      label: 'FRAME MARKER',
-      active: ['READING_LENGTH', 'READING_DATA', 'READING_CHECKSUM', 'MESSAGE_OK'].includes(rxState),
-      detail: ['READING_LENGTH', 'READING_DATA', 'READING_CHECKSUM', 'MESSAGE_OK'].includes(rxState)
-        ? '0xFF DETECTED'
-        : 'AWAITING',
-    },
-    {
-      id: 'payload',
-      label: 'PAYLOAD STREAM',
-      active: ['READING_DATA', 'READING_CHECKSUM', 'MESSAGE_OK'].includes(rxState),
-      detail:
-        telemetry.activeBytesProgress.total > 0
-          ? `${telemetry.activeBytesProgress.current}/${telemetry.activeBytesProgress.total} Bytes`
-          : 'IDLE',
-    },
-    {
-      id: 'checksum',
-      label: 'CRC VALIDATION',
-      active: rxState === 'MESSAGE_OK' || rxState === 'CHECKSUM_ERROR',
-      detail:
-        rxState === 'MESSAGE_OK'
-          ? 'MATCHED OK'
-          : rxState === 'CHECKSUM_ERROR'
-          ? 'MISMATCH'
-          : 'PENDING',
-    },
+    { id: 'hunt', label: 'PREAMBLE', active: ['HUNTING', 'SYNCED', 'READING_START', 'READING_LENGTH', 'READING_DATA', 'READING_CHECKSUM'].includes(rxState), detail: rxState === 'HUNTING' ? 'Scanning...' : 'Locked' },
+    { id: 'start', label: 'START FLAG', active: ['READING_START', 'READING_LENGTH', 'READING_DATA', 'READING_CHECKSUM'].includes(rxState), detail: rxState === 'READING_START' ? '0xFF Found' : (rxState === 'HUNTING' ? 'Waiting' : 'Verified') },
+    { id: 'data', label: 'PAYLOAD', active: ['READING_DATA', 'READING_CHECKSUM'].includes(rxState), detail: rxState === 'READING_DATA' ? `Reading...` : (rxState === 'HUNTING' || rxState === 'READING_START' || rxState === 'READING_LENGTH' ? 'Waiting' : 'Received') },
+    { id: 'fec', label: 'AES-GCM/CRC', active: ['READING_CHECKSUM', 'MESSAGE_OK'].includes(rxState), detail: 'Decoding...' },
+    { id: 'crc', label: 'VALIDATION', active: ['MESSAGE_OK', 'CHECKSUM_ERROR'].includes(rxState), detail: rxState === 'MESSAGE_OK' ? 'Valid' : (rxState === 'CHECKSUM_ERROR' ? 'Failed' : 'Pending') },
   ];
 
   return (
     <div className="space-y-4">
-      {/* Control Card */}
-      <div className="p-5 rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Primary DSP Control Module */}
+      <div className="p-5 rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md relative overflow-hidden group">
+        <div className="absolute inset-0 bg-gradient-to-bl from-cyan-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 relative z-10">
           <div>
-            <div className="flex items-center space-x-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-cyan-500/20 rounded-lg border border-cyan-500/30">
+                <Activity className="w-4 h-4 text-cyan-400" />
+              </div>
               <h2 className="font-display font-bold text-lg text-slate-100 uppercase tracking-wide">
-                Acoustic Signal Receiver
+                Acoustic Receiver
               </h2>
+              <div className="flex items-center space-x-1.5 ml-4 bg-slate-950 px-2 py-1 rounded border border-slate-800">
+                <Network className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="text-[11px] font-mono-code text-cyan-400">Node {myNodeId}</span>
+              </div>
             </div>
             <p className="text-xs text-slate-400 mt-1">
-              Sample-accurate demodulator with dual-frequency Goertzel phase correlation.
+              Sample-accurate dual-frequency Goertzel FSK demodulator.
             </p>
           </div>
 
@@ -111,7 +89,7 @@ export const ReceiverPanel: React.FC = () => {
             ) : (
               <>
                 <Mic className="w-4 h-4" />
-                <span>Activate Acoustic Link</span>
+                <span>Activate Link</span>
               </>
             )}
           </button>
@@ -122,7 +100,6 @@ export const ReceiverPanel: React.FC = () => {
           <span className="text-[11px] font-mono-code uppercase tracking-wider text-slate-400 block mb-3">
             Hardware Demodulation Pipeline
           </span>
-
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
             {pipelineStages.map((stage, idx) => (
               <div
@@ -151,33 +128,28 @@ export const ReceiverPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Rolling Bitstream Inspector */}
-      <div className="p-4 rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center space-x-2">
-            <Binary className="w-4 h-4 text-cyan-400" />
-            <span className="text-xs font-semibold text-slate-300 font-mono-code uppercase">
-              Live Ring-Buffer Bitstream
-            </span>
-          </div>
-          <span className="text-[11px] font-mono-code text-slate-400">
-            {telemetry.rollingBits.length} bits captured
-          </span>
-        </div>
-
-        <div className="p-3 bg-slate-950 rounded-xl border border-slate-800/80 font-mono-code text-xs tracking-wider break-all min-h-[50px] max-h-24 overflow-y-auto leading-relaxed">
-          {telemetry.rollingBits ? (
-            <>
-              <span className="text-slate-400">{telemetry.rollingBits.slice(0, -1)}</span>
-              <span className="text-cyan-300 font-bold bg-cyan-500/20 px-0.5 rounded animate-pulse">
-                {telemetry.rollingBits.slice(-1)}
-              </span>
-            </>
-          ) : (
-            <span className="text-slate-600 italic">No incoming carrier pulses detected...</span>
-          )}
-        </div>
-      </div>
+      {/* Active File Transfers (if any) */}
+      {Object.values(fileTransfers).filter(f => !f.completed).length > 0 && (
+         <div className="p-4 rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md">
+            <h3 className="font-display font-semibold text-sm text-slate-200 uppercase tracking-wide mb-3 flex items-center gap-2">
+               <FileDown className="w-4 h-4 text-indigo-400" />
+               Incoming File Transfers
+            </h3>
+            <div className="space-y-3">
+              {Object.values(fileTransfers).filter(f => !f.completed).map(f => (
+                 <div key={f.msgId} className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                    <div className="flex justify-between text-xs font-mono-code text-slate-300 mb-2">
+                       <span>{f.filename}</span>
+                       <span className="text-indigo-400">{Math.round(f.progress * 100)}% ({Object.keys(f.chunks).length}/{f.totalChunks})</span>
+                    </div>
+                    <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+                      <div className="h-full bg-indigo-500 transition-all" style={{width: `${f.progress * 100}%`}} />
+                    </div>
+                 </div>
+              ))}
+            </div>
+         </div>
+      )}
 
       {/* Decoded Packets Stream */}
       <div className="p-5 rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md">
@@ -191,7 +163,6 @@ export const ReceiverPanel: React.FC = () => {
               {messages.length} Packets
             </span>
           </div>
-
           {messages.length > 0 && (
             <button
               onClick={clearMessages}
@@ -208,7 +179,7 @@ export const ReceiverPanel: React.FC = () => {
             <Radio className="w-8 h-8 text-slate-600 mx-auto mb-2" />
             <p className="text-sm text-slate-400 font-medium">Awaiting incoming transmissions</p>
             <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-              Place the transmitter near this microphone, or toggle internal loopback mode to run a self-test.
+              Place the transmitter near this microphone. Addressing and AES-GCM encryption will be handled automatically.
             </p>
           </div>
         ) : (
@@ -218,54 +189,52 @@ export const ReceiverPanel: React.FC = () => {
                 key={msg.id}
                 className="p-4 rounded-xl bg-slate-950 border border-slate-800/90 hover:border-slate-700 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
               >
-                <div className="space-y-1">
-                  <div className="flex items-center space-x-2.5">
-                    {msg.isValid ? (
-                      <span className="inline-flex items-center space-x-1 text-[11px] font-mono-code px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">
+                <div className="space-y-1 w-full">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    {msg.isFile ? <span className="inline-flex items-center space-x-1 text-[10px] font-mono-code px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/30"><Network className="w-3 h-3" /><span>ARQ ACK SENT</span></span> : null}
+                    {msg.senderId !== undefined && (
+                       <span className="inline-flex items-center space-x-1 text-[10px] font-mono-code px-2 py-0.5 rounded bg-slate-800 text-cyan-300 border border-slate-700">
+                          <Network className="w-3 h-3" />
+                          <span>FROM: {msg.senderId}</span>
+                       </span>
+                    )}
+                    {msg.text && msg.text.startsWith('[SECURE]') && (
+    <span className="inline-flex items-center space-x-1 text-[10px] font-mono-code px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30">
+      <Lock className="w-3 h-3 text-amber-400" />
+      <span>AES-256 DECRYPTED</span>
+    </span>
+  )}
+  {msg.isValid ? (
+                      <span className="inline-flex items-center space-x-1 text-[10px] font-mono-code px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">
                         <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                        <span>CHECKSUM OK</span>
+                        <span>CRC OK</span>
                       </span>
                     ) : (
-                      <span className="inline-flex items-center space-x-1 text-[11px] font-mono-code px-2 py-0.5 rounded bg-rose-500/10 text-rose-300 border border-rose-500/30">
+                      <span className="inline-flex items-center space-x-1 text-[10px] font-mono-code px-2 py-0.5 rounded bg-rose-500/10 text-rose-300 border border-rose-500/30">
                         <XCircle className="w-3 h-3 text-rose-400" />
                         <span>CRC MISMATCH</span>
                       </span>
                     )}
-
-                    <span className="text-[11px] font-mono-code text-slate-400">
+                    
+                    <span className="text-[10px] font-mono-code text-slate-500 ml-auto">
                       {new Date(msg.timestamp).toLocaleTimeString()}
                     </span>
-                    <span className="text-[11px] font-mono-code text-slate-500">·</span>
-                    <span className="text-[11px] font-mono-code text-cyan-400/90">
-                      SNR: {msg.snrSnapshotDb} dB
-                    </span>
                   </div>
-
-                  <p className="text-base font-semibold text-slate-100 font-mono-code select-all">
-                    "{msg.text}"
-                  </p>
-
-                  <div className="text-[10px] font-mono-code text-slate-500">
-                    Payload: {msg.length} Bytes · CRC: 0x{msg.receivedChecksum.toString(16).toUpperCase()}
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => handleCopy(msg.text, msg.id)}
-                  className="self-start sm:self-center p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-cyan-300 hover:border-slate-700 transition-colors flex items-center space-x-1 text-xs"
-                >
-                  {copiedId === msg.id ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      <span className="text-emerald-400">Copied</span>
-                    </>
+                  
+                  {msg.isFile ? (
+                     <div className="flex items-center justify-between p-3 bg-slate-900 border border-slate-800 rounded-lg">
+                        <span className="text-sm font-semibold text-slate-200">{msg.text}</span>
+                        <a href={msg.id} download="received_file.dat" className="px-3 py-1.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded text-xs hover:bg-indigo-500/30">
+                           Download
+                        </a>
+                     </div>
                   ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>Copy</span>
-                    </>
+                     <p className="text-base font-semibold text-slate-100 font-mono-code select-all break-all">
+                       "{msg.text}"
+                     </p>
                   )}
-                </button>
+                  
+                </div>
               </div>
             ))}
           </div>
