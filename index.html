@@ -1,21 +1,23 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Acoustic FSK Data Link</title>
-    <meta name="description" content="Precision acoustic data transceiver and real-time audio spectrum telemetry workstation." />
-    <meta property="og:title" content="Acoustic FSK Data Link" />
-    <meta property="og:description" content="Precision acoustic data transceiver and real-time audio spectrum telemetry workstation." />
-    <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Tonebridge — acoustic data link</title>
+    <meta name="description" content="Tonebridge turns any two devices into an air-gapped data link that talks through sound: MFSK modulation, Reed-Solomon forward error correction and an authenticated encrypted channel. No server, no network." />
+    <meta name="theme-color" content="#080b10" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex" />
+    <meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; /* inline styles are needed for canvas layout; no untrusted CSS is ever interpreted */ img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ws:; worker-src 'self' blob:; base-uri 'none'; form-action 'none'; frame-ancestors 'self'" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icon-192.png" />
   </head>
-  <body class="bg-slate-950 text-slate-100 antialiased selection:bg-cyan-500/30 selection:text-cyan-200">
+  <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <noscript>Tonebridge is a client-side DSP workstation and needs JavaScript enabled.</noscript>
+    <script type="module" src="./src/main.tsx"></script>
   </body>
 </html>
-

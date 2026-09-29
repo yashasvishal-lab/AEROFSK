@@ -1,22 +1,21 @@
-import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import path from 'path';
-import {defineConfig} from 'vite';
+import { defineConfig } from 'vite';
 
-export default defineConfig(() => {
-  return {
-    plugins: [react(), tailwindcss()],
-    resolve: {
-      alias: {
-        '@': path.resolve(__dirname, '.'),
-      },
-    },
-    server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
-      hmr: process.env.DISABLE_HMR !== 'true',
-      // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
-      watch: process.env.DISABLE_HMR === 'true' ? null : {},
-    },
-  };
+// Tonebridge ships as pure static assets: no server, no telemetry, no CDN fonts.
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 3000,
+    host: '0.0.0.0',
+    strictPort: true,
+    // The app is meant to be opened from any host that can reach it - a phone on the LAN,
+    // a sandboxed preview proxy, a static file server. Vite's default host check exists to
+    // block DNS-rebinding attacks against a dev server; the preview proxy runs on its own
+    // domain, so allow that family instead of turning the check off.
+    allowedHosts: ['.e2b.app'],
+    hmr: { overlay: false },
+  },
+  preview: { port: 3000, host: '0.0.0.0', allowedHosts: ['.e2b.app'] },
+  build: { target: 'es2022', outDir: 'dist', modulePreload: { polyfill: false } },
+  worker: { format: 'es' },
 });
